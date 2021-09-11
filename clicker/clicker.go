@@ -14,6 +14,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const HELPTEXT = `usage: clicker [-config | -help]
+
+Options:
+
+  -config        Configure the mouse positions to click
+  -help          Show help message`
+
 type mousePosition struct {
     x int
     y int
@@ -32,7 +39,13 @@ func raiseConfigError() {
 
 func main() {
     configPtr := flag.Bool("config", false, "Configure the mouse positions")
+    helpPtr := flag.Bool("help", false, "Show help text")
     flag.Parse()
+
+    if *helpPtr {
+        fmt.Println(HELPTEXT)
+        return
+    }
 
     if *configPtr {
         err := configureMousePositions()
