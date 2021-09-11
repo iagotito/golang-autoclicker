@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"time"
 
 	"github.com/go-vgo/robotgo"
@@ -34,26 +35,31 @@ func main() {
         return
     }
 
+    go func () {
+        eventHook := gohook.Start()
+        for e := range eventHook {
+            if e.Kind == gohook.KeyDown {
+                fmt.Println("Stoping auto clicker.")
+                os.Exit(0)
+            }
+        }
+    }()
+
     positions := readConfigYaml()
+
+    fmt.Println("Auto clicker started. Press any key to stop it.")
+    fmt.Println("*clicking*")
     mainPosition := positions[0]
     secPositions := positions[1:]
-    breakPoint := 0
     for si := 0; ; si = (si+1) % len(secPositions) {
         robotgo.MoveMouse(mainPosition.x, mainPosition.y)
-        fmt.Println("Cliking 15 times at main position")
         for i := 0; i < 15; i++ {
             robotgo.Click("left")
             time.Sleep(25 * time.Millisecond)
         }
 
-        fmt.Printf("Cliking at position %d\n", si)
         robotgo.MoveClick(secPositions[si].x, secPositions[si].y, "left")
         time.Sleep(25 * time.Millisecond)
-
-        breakPoint++
-        if breakPoint == 50 {
-            break
-        }
     }
 }
 
