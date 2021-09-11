@@ -6,14 +6,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"time"
 
+	"github.com/go-vgo/robotgo"
 	gohook "github.com/robotn/gohook"
 	"gopkg.in/yaml.v3"
 )
 
 type mousePosition struct {
-    x int16
-    y int16
+    x int
+    y int
 }
 
 func check(err error) {
@@ -33,7 +35,26 @@ func main() {
     }
 
     positions := readConfigYaml()
-    fmt.Println(positions)
+    mainPosition := positions[0]
+    secPositions := positions[1:]
+    breakPoint := 0
+    for si := 0; ; si = (si+1) % len(secPositions) {
+        robotgo.MoveMouse(mainPosition.x, mainPosition.y)
+        fmt.Println("Cliking 15 times at main position")
+        for i := 0; i < 15; i++ {
+            robotgo.Click("left")
+            time.Sleep(25 * time.Millisecond)
+        }
+
+        fmt.Printf("Cliking at position %d\n", si)
+        robotgo.MoveClick(secPositions[si].x, secPositions[si].y, "left")
+        time.Sleep(25 * time.Millisecond)
+
+        breakPoint++
+        if breakPoint == 50 {
+            break
+        }
+    }
 }
 
 func configureMousePositions() error {
@@ -54,7 +75,7 @@ func getMousePositions() ([]mousePosition, bool) {
         if e.Kind == gohook.MouseDown {
             switch e.Button {
             case gohook.MouseMap["left"]:
-                position := mousePosition{e.X, e.Y}
+                position := mousePosition{int(e.X), int(e.Y)}
                 positions = append(positions, position)
                 fmt.Printf("Position x:%d y:%d registered\n", e.X, e.Y)
             // for some reason, my mouse's right button returns code 3, which
@@ -82,7 +103,7 @@ func readConfigYaml() []mousePosition {
     yfile, err := ioutil.ReadFile("config.yaml")
     check(err)
 
-    data := make([]map[string]int16, 0)
+    data := make([]map[string]int, 0)
 
     err = yaml.Unmarshal(yfile, &data)
     check(err)
@@ -90,17 +111,17 @@ func readConfigYaml() []mousePosition {
     return mapToPositions(data)
 }
 
-func positionsToMap(positions []mousePosition) []map[string]int16{
-    positionsMapList := make([]map[string]int16, len(positions))
+func positionsToMap(positions []mousePosition) []map[string]int{
+    positionsMapList := make([]map[string]int, len(positions))
     for i, position := range positions {
-        positionsMapList[i] = make(map[string]int16)
+        positionsMapList[i] = make(map[string]int)
         positionsMapList[i]["x"] = position.x
         positionsMapList[i]["y"] = position.y
     }
     return positionsMapList
 }
 
-func mapToPositions(positionsMapList []map[string]int16) []mousePosition {
+func mapToPositions(positionsMapList []map[string]int) []mousePosition {
     positions := make([]mousePosition, len(positionsMapList))
     for i, position := range positionsMapList {
         positions[i] = mousePosition{position["x"], position["y"]}
