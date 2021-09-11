@@ -72,15 +72,22 @@ func main() {
     fmt.Println("*clicking*")
     mainPosition := positions[0]
     secPositions := positions[1:]
-    for si := 0; ; si = (si+1) % len(secPositions) {
+    if len(secPositions) == 0 {
         robotgo.MoveMouse(mainPosition.x, mainPosition.y)
-        for i := 0; i < 15; i++ {
+        for {
             robotgo.Click("left")
             time.Sleep(25 * time.Millisecond)
         }
+    } else {
+        for si := 0; ; si = (si+1) % len(secPositions) {
+            robotgo.MoveMouse(mainPosition.x, mainPosition.y)
+            for i := 0; i < 15; i++ {
+                robotgo.Click("left")
+                time.Sleep(25 * time.Millisecond)
+            }
 
-        robotgo.MoveClick(secPositions[si].x, secPositions[si].y, "left")
-        time.Sleep(25 * time.Millisecond)
+            robotgo.MoveClick(secPositions[si].x, secPositions[si].y, "left")
+        }
     }
 }
 
@@ -137,6 +144,10 @@ func readConfigYaml() ([]mousePosition, bool) {
     err = yaml.Unmarshal(yfile, &data)
     if err != nil {
         return nil, false
+    }
+
+    if len(data) == 0 {
+        raiseConfigError()
     }
 
     return mapToPositions(data), true
