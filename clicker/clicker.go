@@ -25,6 +25,11 @@ func check(err error) {
     }
 }
 
+func raiseConfigError() {
+    fmt.Println("Error with config file. Run the program with \"-config\" flag again to fix it.")
+    os.Exit(0)
+}
+
 func main() {
     configPtr := flag.Bool("config", false, "Configure the mouse positions")
     flag.Parse()
@@ -45,7 +50,10 @@ func main() {
         }
     }()
 
-    positions := readConfigYaml()
+    positions, ok := readConfigYaml()
+    if !ok {
+        raiseConfigError()
+    }
 
     fmt.Println("Auto clicker started. Press any key to stop it.")
     fmt.Println("*clicking*")
@@ -105,16 +113,39 @@ func writeConfigYaml(positions []mousePosition) {
     check(err)
 }
 
-func readConfigYaml() []mousePosition {
+func readConfigYaml() ([]mousePosition, bool) {
     yfile, err := ioutil.ReadFile("config.yaml")
-    check(err)
+    if err != nil {
+        return nil, false
+    }
 
     data := make([]map[string]int, 0)
 
     err = yaml.Unmarshal(yfile, &data)
-    check(err)
+    if err != nil {
+        return nil, false
+    }
 
-    return mapToPositions(data)
+    return mapToPositions(data), true
+}
+
+func mapToPositions(positionsMapList []map[string]int) []mousePosition {
+    positions := make([]mousePosition, len(positionsMapList))
+    for i, position := range positionsMapList {
+        for k := range position {
+            if k != "x" && k != "y" {
+                raiseConfigError()
+            }
+        }
+        if _, ok := position["x"]; !ok {
+            raiseConfigError()
+        }
+        if _, ok := position["y"]; !ok {
+            raiseConfigError()
+        }
+        positions[i] = mousePosition{position["x"], position["y"]}
+    }
+    return positions
 }
 
 func positionsToMap(positions []mousePosition) []map[string]int{
@@ -125,12 +156,4 @@ func positionsToMap(positions []mousePosition) []map[string]int{
         positionsMapList[i]["y"] = position.y
     }
     return positionsMapList
-}
-
-func mapToPositions(positionsMapList []map[string]int) []mousePosition {
-    positions := make([]mousePosition, len(positionsMapList))
-    for i, position := range positionsMapList {
-        positions[i] = mousePosition{position["x"], position["y"]}
-    }
-    return positions
 }
